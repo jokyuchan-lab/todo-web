@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>오늘의 할 일</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app" id="app">
+
+    <!-- 저장에 실패했을 때만 보이는 안내 -->
+    <p class="storage-warning" id="storage-warning" role="alert" hidden>저장되지 않을 수 있어요</p>
+
+    <!-- 1) 앱 제목 + 남은 할 일 개수 + 오늘의 격언 + 다크 모드 스위치 -->
+    <header class="app-header">
+      <h1 class="app-title" id="app-title">오늘의 할 일</h1>
+      <span class="remaining-badge" id="remaining-count">0개 남음</span>
+      <!-- 오늘의 격언: 페이지를 열 때마다 하나를 골라 보여 준다 -->
+      <p class="quote" id="quote" aria-label="오늘의 격언"></p>
+      <button type="button" class="theme-toggle" id="theme-toggle" role="switch"
+              aria-checked="false" aria-label="다크 모드" title="다크 모드 (Alt+D)">
+        <span class="theme-knob" aria-hidden="true"></span>
+      </button>
+    </header>
+
+    <!-- 2) 왼쪽 칸(어두운 상자): 카테고리 → 진행률 → 데이터 관리 → 단축키 -->
+    <aside class="card sidebar" id="sidebar" aria-label="카테고리와 진행률">
+
+      <!-- 2-1) 카테고리 분류(필터): 세로로 나열 -->
+      <div class="side-block">
+        <h2 class="side-title">카테고리</h2>
+        <nav class="filter-tabs" id="filter-tabs" aria-label="카테고리 필터">
+          <button type="button" class="tab active" id="filter-all" data-filter="all" title="Alt+1">전체</button>
+          <button type="button" class="tab" id="filter-work" data-filter="work" title="Alt+2"><span class="count-dot count-dot-work" aria-hidden="true"></span>업무</button>
+          <button type="button" class="tab" id="filter-personal" data-filter="personal" title="Alt+3"><span class="count-dot count-dot-personal" aria-hidden="true"></span>개인</button>
+          <button type="button" class="tab" id="filter-study" data-filter="study" title="Alt+4"><span class="count-dot count-dot-study" aria-hidden="true"></span>공부</button>
+        </nav>
+      </div>
+
+      <!-- 2-2) 진행률: 전체 + 카테고리별(가로 막대와 %) -->
+      <section class="side-block progress" id="progress-section" aria-label="진행률">
+        <h2 class="side-title">진행률</h2>
+        <div class="progress-total">
+          <div class="progress-head">
+            <span class="progress-label">전체</span>
+            <span class="progress-text" id="progress-total-text">0/0 완료 (0%)</span>
+          </div>
+          <div class="bar bar-total" role="progressbar" aria-label="전체 진행률"
+               aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="bar-fill" id="progress-total-bar"></div>
+          </div>
+          <!-- 완료율에 따라 바뀌는 응원 메시지 -->
+          <p class="cheer-message" id="cheer-message"></p>
+        </div>
+
+        <!-- 카테고리별 진행률: 한 줄에 "이름 | 막대 | 개수와 %" -->
+        <div class="progress-categories">
+          <div class="progress-row progress-row-work">
+            <span class="progress-name">업무</span>
+            <div class="bar" role="progressbar" aria-label="업무 진행률"
+                 aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <div class="bar-fill bar-fill-work" id="progress-work-bar"></div>
+            </div>
+            <span class="progress-count" id="progress-work-text">0/0 (0%)</span>
+          </div>
+          <div class="progress-row progress-row-personal">
+            <span class="progress-name">개인</span>
+            <div class="bar" role="progressbar" aria-label="개인 진행률"
+                 aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <div class="bar-fill bar-fill-personal" id="progress-personal-bar"></div>
+            </div>
+            <span class="progress-count" id="progress-personal-text">0/0 (0%)</span>
+          </div>
+          <div class="progress-row progress-row-study">
+            <span class="progress-name">공부</span>
+            <div class="bar" role="progressbar" aria-label="공부 진행률"
+                 aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <div class="bar-fill bar-fill-study" id="progress-study-bar"></div>
+            </div>
+            <span class="progress-count" id="progress-study-text">0/0 (0%)</span>
+          </div>
+        </div>
+
+        <p class="today-count" id="today-count">오늘 추가한 할 일 0개</p>
+      </section>
+
+      <!-- 2-3) 데이터 관리 버튼 -->
+      <div class="side-block">
+        <h2 class="side-title">데이터 관리</h2>
+        <div class="footer-actions">
+          <button type="button" class="btn btn-ghost" id="clear-done-button">완료 항목 삭제</button>
+          <button type="button" class="btn btn-ghost" id="export-button">데이터 내보내기</button>
+          <button type="button" class="btn btn-ghost" id="import-button">데이터 가져오기</button>
+          <!-- 실제 파일 선택 창. 보이지 않고, "데이터 가져오기" 버튼이 대신 눌러 준다 -->
+          <input type="file" id="import-file" accept=".json,application/json" hidden>
+        </div>
+      </div>
+
+      <!-- 2-4) 단축키 안내 -->
+      <section class="side-block shortcuts" id="shortcuts" aria-label="단축키">
+        <h2 class="side-title">단축키</h2>
+        <dl class="shortcut-list">
+          <div class="shortcut-row"><dt><kbd>Alt</kbd>+<kbd>N</kbd></dt><dd>할 일 입력창으로 이동</dd></div>
+          <div class="shortcut-row"><dt><kbd>Alt</kbd>+<kbd>S</kbd></dt><dd>검색창으로 이동</dd></div>
+          <div class="shortcut-row"><dt><kbd>Alt</kbd>+<kbd>1</kbd>~<kbd>4</kbd></dt><dd>전체 / 업무 / 개인 / 공부 보기</dd></div>
+          <div class="shortcut-row"><dt><kbd>Alt</kbd>+<kbd>D</kbd></dt><dd>다크 모드 켜기 / 끄기</dd></div>
+          <div class="shortcut-row"><dt><kbd>Ctrl</kbd>+<kbd>Z</kbd></dt><dd>방금 한 삭제 되돌리기</dd></div>
+          <div class="shortcut-row"><dt><kbd>Enter</kbd></dt><dd>할 일 추가 / 수정 저장</dd></div>
+          <div class="shortcut-row"><dt><kbd>Esc</kbd></dt><dd>수정 취소</dd></div>
+        </dl>
+      </section>
+    </aside>
+
+    <!-- 3) 오른쪽 칸: 검색 + 정렬 → 할 일 입력 → 카테고리별 개수 → 목록 -->
+    <section class="card list-area" id="list-section" aria-label="할 일 목록">
+      <div class="list-toolbar">
+        <input type="search" class="field search-input" id="search-input"
+               placeholder="할 일 검색" maxlength="100" aria-label="할 일 검색" title="Alt+S">
+        <select class="field sort-select" id="sort-select" aria-label="정렬 방식">
+          <option value="status">완료 상태순</option>
+          <option value="created">생성일순</option>
+          <option value="category">카테고리순</option>
+          <option value="manual">직접 정렬</option>
+        </select>
+      </div>
+
+      <!-- 할 일 입력: 검색 바로 아래 -->
+      <div class="input-area" id="input-section" role="group" aria-label="할 일 추가">
+        <input type="text" class="field todo-input" id="todo-input"
+               placeholder="할 일을 입력하세요" maxlength="100" aria-label="할 일 내용" title="Alt+N">
+        <select class="field category-select" id="category-select" aria-label="카테고리">
+          <option value="work">업무</option>
+          <option value="personal">개인</option>
+          <option value="study">공부</option>
+        </select>
+        <button type="button" class="btn btn-primary" id="add-button">추가</button>
+        <!-- 내용의 키워드로 카테고리를 자동 분류했을 때 보여 주는 안내 -->
+        <p class="auto-category-hint" id="auto-category-hint" aria-live="polite" hidden></p>
+      </div>
+
+      <!-- 카테고리별 할 일 개수 (필터나 검색과 상관없이 전체 기준) -->
+      <div class="category-counts" id="category-counts" aria-label="카테고리별 할 일 개수">
+        <span class="count-chip"><span class="count-dot count-dot-work" aria-hidden="true"></span>업무 <strong id="count-work">0개</strong></span>
+        <span class="count-chip"><span class="count-dot count-dot-personal" aria-hidden="true"></span>개인 <strong id="count-personal">0개</strong></span>
+        <span class="count-chip"><span class="count-dot count-dot-study" aria-hidden="true"></span>공부 <strong id="count-study">0개</strong></span>
+      </div>
+      <ul class="todo-list" id="todo-list" aria-label="할 일"></ul>
+    </section>
+
+  </main>
+
+  <!-- 화면 아래에 잠깐 떴다 사라지는 알림. "되돌리기" 버튼이 붙을 수 있다 -->
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden>
+    <span class="toast-message" id="toast-message"></span>
+    <button type="button" class="toast-action" id="toast-action" hidden></button>
+  </div>
+
+  <!-- 눈에는 보이지 않고 스크린 리더만 읽어 주는 안내 -->
+  <div class="sr-only" id="live-region" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
